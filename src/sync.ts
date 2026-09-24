@@ -30,7 +30,7 @@ export function pack(records:RecordData[],deleted:string[],kind:Batch['kind'],ba
 
 export class SyncEngine {
   dirty=true; stopped=false; private busy=false; private currentNamespace=''; private queue?:Queue;
-  constructor(private plugin:ReactRNPlugin,private fetcher:typeof fetch=fetch) {}
+  constructor(private plugin:ReactRNPlugin,private fetcher:typeof fetch=fetch.bind(globalThis)) {}
   signal=()=>{this.dirty=true;};
   stop(){this.stopped=true;this.queue?.db.close();}
   async report(message:string,extra:Record<string,unknown>={}) {
@@ -153,8 +153,10 @@ export class SyncEngine {
         const ack=await response.json();
         if(ack.ack_seq!==batch.seq || ack.batch_id!==batch.batch_id)throw new Error('ACK mismatch');
         await queue.ack(batch);
-      }catch{
-        await queue.failed(false);await this.report('连接中断或确认不匹配；队列已保留，自动重试。');return false;
+      }catch(e){
+        await queue.failed(false);await this.report('连接中断或确认不匹配；队列已保留，自动重试。',{
+          error:e instanceof Error?e.message:String(e)
+        });return false;
       }
     }
     const pending=await queue.count();
