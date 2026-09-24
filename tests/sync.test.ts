@@ -134,3 +134,17 @@ test('queue and ledger transaction rollback together on duplicate sequence',asyn
   s.nextSeq=2;await q.enqueue([b],s);const later={...s,nextSeq:99};
   await expect(q.enqueue([b],later)).rejects.toThrow();expect((await q.state()).nextSeq).toBe(2);q.db.close();
 });
+
+test('default upload transport preserves the browser fetch receiver',async()=>{
+  const h=harness();
+  vi.stubGlobal('fetch',function(this:unknown,...args:Parameters<typeof fetch>){
+    if(this!==globalThis)throw new TypeError('Illegal invocation');
+    return h.fetcher(...args);
+  });
+  const engine=new SyncEngine(h.plugin);
+  try {
+    await engine.tick();
+    expect(h.sent.map(b=>b.kind)).toEqual(['snapshot_start','snapshot_page','snapshot_commit']);
+    expect(h.memory.get('rn-status')).toMatchObject({message:'同步完成',pending:0});
+  } finally {engine.stop();h.engine.stop();vi.unstubAllGlobals();}
+});
