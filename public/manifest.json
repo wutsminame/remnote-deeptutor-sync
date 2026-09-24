@@ -1,0 +1,8 @@
+{
+  "manifestVersion":1,"id":"remnote_deeptutor_sync","name":"DeepTutor Sync",
+  "author":"wutsminame","repoUrl":"https://github.com/wutsminame/remnote-deeptutor-sync","version":{"major":0,"minor":1,"patch":1},
+  "unlisted":true,
+  "theme":[],"enableOnMobile":false,"requestNative":false,
+  "description":"Sync RemNote text and graph to your own semantic retrieval service.",
+  "requiredScopes":[{"type":"All","level":"Read"}]
+}
