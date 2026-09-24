@@ -1,9 +1,12 @@
-import {AppEvents,declareIndexPlugin,type ReactRNPlugin} from '@remnote/plugin-sdk';
+import {AppEvents,declareIndexPlugin,WidgetLocation,type ReactRNPlugin} from '@remnote/plugin-sdk';
 import {SyncEngine} from '../sync';
 
 let engine:SyncEngine|undefined, timer:ReturnType<typeof setInterval>|undefined;
 async function onActivate(plugin:ReactRNPlugin){
   engine=new SyncEngine(plugin);
+  await plugin.app.registerWidget('settings',WidgetLocation.Pane,{
+    dimensions:{width:'100%',height:'auto'},widgetTabTitle:'DeepTutor Sync'
+  });
   await plugin.app.registerCommand({id:'rn-sync-settings',name:'DeepTutor Sync: 配置与状态',
     action:()=>plugin.window.openWidgetInPane('settings').then(()=>{})});
   // Payload is intentionally ignored: SDK types describe it as `any`.
