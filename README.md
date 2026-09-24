@@ -107,10 +107,3 @@ Record fields: `id`, `text`, `back_text`, `rich_text`, `rich_back_text`, `parent
 - https://plugins.remnote.com/advanced/submitting_plugins
 - https://plugins.remnote.com/advanced/unlisted_plugins
 
-## v0.1.2 desktop acceptance (2026-09-25)
-
-Verified in RemNote Desktop 1.28.19 (1.28.19.584450), using a newly created local knowledge base with one synthetic note and a temporary localhost ACK receiver. The configuration displayed the KB ID, saved the URL/token, and retained them in a new window. Full sync sent 32 records (including RemNote-generated metadata); renaming alpha to beta sent a delta for the same Rem ID. A subsequent full sync also completed, with the queue at zero. The final configuration popup reopened successfully. Test sync was disabled afterward. No Linux/DeepTutor tests or model downloads were run.
-
-Real-host testing additionally fixed two issues: the settings widget must be registered before it is opened, and the browser fetch function must retain its global receiver. Settings now open in a registered popup to avoid this host's widget-pane restoration error. Upload failures retain error details. All 15 plugin tests pass.
-
-For development, use the `localhost` hostname: this host treated `127.0.0.1` as a published plugin and attempted to load the unavailable version from its CDN. The tested localhost path did not display the marketplace's separate grant dialog. Therefore this development-host check does not establish successful fresh ZIP installation, marketplace permission consent, HTTPS deployment, or review approval; those checks remain separate.
