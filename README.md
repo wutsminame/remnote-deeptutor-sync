@@ -9,9 +9,6 @@ The initial plugin implementation, tests, and documentation were primarily gener
 
 本插件初始版本的代码、测试及文档主要由 OpenAI Codex 按仓库所有者的需求生成。当前为 MVP，自动化检查和构建成功不替代人工审查及目标环境中的验证；尚待验证的范围见 [MVP limitations](#mvp-limitations)。
 
-## Data Privacy
-Please be noted that this plugin sends your rems to your appointed server that stores and processes your rems, which may cause significant personal data risk if this server is not under your control. Installing this plugin means your acceptance of the risks above. The best practice is to have this server on your own. 
-
 
 ## Features
 
@@ -33,11 +30,27 @@ If your server uses a hosted embedding provider, that server sends retrieval sni
 
 ## Install and configure
 
+Version **0.1.2** fixes the missing knowledge-base permission identified during RemNote review. The manifest requests two independent read scopes:
+
+- `All / Read`: read Rem text and graph relationships for synchronization.
+- `KnowledgeBaseInfo / Read`: read the current KB ID for the settings page, pairing and synchronization isolation. `All` does not include this scope.
+
+Build validation now rejects a missing scope in both production and localhost builds. See the [official permission definitions](https://plugins.remnote.com/advanced/permissions).
+
 The manifest uses `unlisted: true` for personal use. Uploading `PluginZip.zip` through RemNote's **Settings → Plugins → Build → Upload plugin** follows RemNote's submission/review process; compilation alone does not mean approval.
 
 After loading the plugin, run **DeepTutor Sync: 配置与状态** from the command menu. The page displays the current KB ID. Configure an HTTPS service URL and the **sync** token issued for that KB, enable synchronization and save.
 
 The service must allow the actual plugin Origin through CORS and implement the protocol below. Keep one designated syncing client per KB. The plugin runs only while RemNote and its plugin host are active.
+
+### Fresh-install acceptance before resubmission
+
+1. Use a clean RemNote test environment with no prior grants for this plugin and only synthetic notes. Install v0.1.2 and grant the two declared read scopes through the normal installation flow, without manually adding permissions afterward.
+2. Open **DeepTutor Sync: 配置与状态**. Confirm the KB ID appears without a permission error, save a test service URL and pairing token, reopen the page and verify the saved configuration.
+3. Enable sync and verify the service acknowledges `snapshot_start`, `snapshot_page` and `snapshot_commit`. Rename a test Rem and verify a subsequent `delta`; confirm the local queue drains and status reports completion.
+4. Record the RemNote version, plugin version, granted scopes, configuration result and server acknowledgements before resubmitting the ZIP.
+
+The automated permission regression tests use an SDK test double that denies undeclared KB access and fresh local storage. They do not establish successful fresh installation in the real RemNote host.
 
 ## Build from source
 

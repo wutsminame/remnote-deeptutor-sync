@@ -1,5 +1,5 @@
 {
-  "name": "remnote-deeptutor-sync", "version": "0.1.1", "private": true,
+  "name": "remnote-deeptutor-sync", "version": "0.1.2", "private": true,
   "scripts": {
     "dev": "webpack serve --mode development",
     "typecheck": "tsc --noEmit",
