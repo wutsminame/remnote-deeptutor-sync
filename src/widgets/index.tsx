@@ -4,11 +4,12 @@ import {SyncEngine} from '../sync';
 let engine:SyncEngine|undefined, timer:ReturnType<typeof setInterval>|undefined;
 async function onActivate(plugin:ReactRNPlugin){
   engine=new SyncEngine(plugin);
-  await plugin.app.registerWidget('settings',WidgetLocation.Pane,{
-    dimensions:{width:'100%',height:'auto'},widgetTabTitle:'DeepTutor Sync'
+  // A popup avoids restoring a widget pane URL on the next host startup.
+  await plugin.app.registerWidget('settings',WidgetLocation.Popup,{
+    dimensions:{width:720,height:680}
   });
   await plugin.app.registerCommand({id:'rn-sync-settings',name:'DeepTutor Sync: 配置与状态',
-    action:()=>plugin.window.openWidgetInPane('settings').then(()=>{})});
+    action:()=>plugin.widget.openPopup('settings')});
   // Payload is intentionally ignored: SDK types describe it as `any`.
   plugin.event.addListener(AppEvents.GlobalRemChanged,undefined,engine.signal);
   timer=setInterval(()=>void engine?.tick(),3000);
