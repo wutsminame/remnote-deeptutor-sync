@@ -4,13 +4,27 @@ import {Queue} from '../src/queue';
 import {SyncEngine} from '../src/sync';
 import {initialState,validateUrl,hash,type Batch,type Config} from '../src/types';
 import type {ReactRNPlugin} from '@remnote/plugin-sdk';
+import {readFileSync,mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import {spawnSync} from 'node:child_process';
+
+const manifest=JSON.parse(readFileSync(new URL('../public/manifest.json',import.meta.url),'utf8')) as {
+  requiredScopes:{type:string;level:string}[];
+};
 
 function rem(id='r',text='alpha',extra:any={}) {return {_id:id,text:[text],backText:[],parent:null,children:[],type:0,
   updatedAt:1,localUpdatedAt:1,createdAt:1,getTagRems:async()=>[],remsBeingReferenced:async()=>[],isDocument:async()=>false,...extra};}
-function harness(){
+function harness(options:{scopes?:typeof manifest.requiredScopes;configured?:boolean}={}){
   const kb='kb-'+crypto.randomUUID(); const memory=new Map<string,any>(); let records:any[]=[rem()];
-  const cfg:Config={url:'https://example.com',token:'test-token-long-enough',enabled:true};memory.set('rn-config-'+kb,cfg);
-  const plugin={kb:{getCurrentKnowledgeBaseData:async()=>({_id:kb,name:'test'})},
+  const cfg:Config={url:'https://example.com',token:'test-token-long-enough',enabled:true};
+  if(options.configured!==false)memory.set('rn-config-'+kb,cfg);
+  const scopes=options.scopes??manifest.requiredScopes;
+  const plugin={kb:{getCurrentKnowledgeBaseData:async()=>{
+    if(!scopes.some(scope=>scope.type==='KnowledgeBaseInfo' && scope.level==='Read'))
+      throw new Error('Permission denied: KnowledgeBaseInfo / Read');
+    return {_id:kb,name:'test'};
+  }},
     rem:{getAll:async()=>records,findOne:async(id:string)=>records.find(r=>r._id===id)},
     storage:{getLocal:async(key:string)=>memory.get(key),setLocal:async(key:string,value:any)=>{memory.set(key,value);}},
     richText:{toString:async(t:string[])=>t.join('')}} as unknown as ReactRNPlugin;
@@ -21,6 +35,39 @@ function harness(){
   return {engine,plugin,kb,memory,cfg,sent,fetcher,setRecords:(r:any[])=>{records=r;}};
 }
 beforeEach(()=>{vi.stubGlobal('navigator',{locks:{request:async(_name:any,_opt:any,cb:any)=>cb({name:'lock'})}});});
+
+test('fresh storage can read KB identity and start full sync with only manifest grants',async()=>{
+  const h=harness({configured:false});
+  expect(h.memory.size).toBe(0);
+  const data=await h.plugin.kb.getCurrentKnowledgeBaseData();
+  expect(data._id).toBe(h.kb);
+  expect(await h.plugin.storage.getLocal('rn-config-'+data._id)).toBeUndefined();
+  await h.engine.tick();expect(h.fetcher).not.toHaveBeenCalled();
+  await h.plugin.storage.setLocal('rn-config-'+data._id,h.cfg);
+  await h.engine.tick();
+  expect(h.sent.map(b=>b.kind)).toEqual(['snapshot_start','snapshot_page','snapshot_commit']);
+  expect(h.memory.get('rn-status')).toMatchObject({message:'同步完成',pending:0,kbId:h.kb});
+  h.engine.stop();
+});
+test('old All-only scope reproduces rejected KB access and prevents upload',async()=>{
+  const h=harness({scopes:[{type:'All',level:'Read'}]});
+  await expect(h.plugin.kb.getCurrentKnowledgeBaseData()).rejects.toThrow('KnowledgeBaseInfo');
+  await h.engine.tick();expect(h.fetcher).not.toHaveBeenCalled();
+  expect(h.memory.get('rn-status')?.message).toContain('KnowledgeBaseInfo');
+  h.engine.stop();
+});
+test('production and localhost build validation reject a missing KB scope',()=>{
+  const fixture=mkdtempSync(join(tmpdir(),'remnote-scope-test-'));
+  try {
+    mkdirSync(join(fixture,'public'));
+    writeFileSync(join(fixture,'public/manifest.json'),JSON.stringify({...manifest,
+      requiredScopes:manifest.requiredScopes.filter(scope=>scope.type!=='KnowledgeBaseInfo')}));
+    for(const mode of [[],['--local']]) {
+      const result=spawnSync(process.execPath,[resolve('validate.cjs'),...mode],{cwd:fixture,encoding:'utf8'});
+      expect(result.status).toBe(1);expect(result.stderr).toContain('KnowledgeBaseInfo / Read');
+    }
+  } finally {rmSync(fixture,{recursive:true,force:true});}
+});
 
 test('HTTPS validation permits only explicit local development exception',()=>{
   expect(validateUrl('https://host.example/')).toBe('https://host.example');
