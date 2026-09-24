@@ -21,14 +21,33 @@ function Settings(){
     await request('retry');
     await plugin.storage.setLocal('rn-config-'+kb,{url:validateUrl(url),token,enabled});setMessage('配置已保存。');
   }catch(e){setMessage(String(e));}}
-  return <main style={{fontFamily:'system-ui',maxWidth:650,padding:24,lineHeight:1.7}}>
+  return <main className="deeptutor-settings" style={{fontFamily:'system-ui',maxWidth:650,padding:24,lineHeight:1.7}}>
+    <style>{`
+      .deeptutor-settings .config-field { display:block; margin:16px 0; font-weight:600; }
+      .deeptutor-settings .config-input {
+        display:block; box-sizing:border-box; width:100%; min-height:44px; margin-top:6px;
+        padding:10px 12px; border:1px solid #8a8a8a; border-radius:6px;
+        background:rgba(127,127,127,.06); color:inherit; font:inherit; font-weight:400;
+      }
+      .deeptutor-settings .config-input::placeholder { color:inherit; opacity:.55; }
+      .deeptutor-settings .config-input:focus {
+        border-color:#3b82f6; outline:2px solid #3b82f6; outline-offset:1px;
+      }
+      .deeptutor-settings .config-actions { display:flex; flex-wrap:wrap; gap:8px; }
+      .deeptutor-settings .config-actions button {
+        padding:8px 14px; border:1px solid #8a8a8a; border-radius:6px;
+        background:rgba(127,127,127,.06); color:inherit; font:inherit; cursor:pointer;
+      }
+      .deeptutor-settings .config-actions button:first-child { background:#2563eb; border-color:#2563eb; color:#fff; }
+      .deeptutor-settings .config-actions button:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; }
+    `}</style>
     <h2>DeepTutor Sync</h2><p>当前知识库 ID：<code>{kb}</code></p>
     <p>将当前知识库的文本、层级、标签和引用同步到你的服务器。图片、PDF 等附件文件不上传。</p>
-    <label>服务器 URL<input style={{display:'block',width:'100%'}} value={url} onChange={e=>setURL(e.target.value)} placeholder="https://notes.example.com"/></label>
-    <label>配对 sync token<input style={{display:'block',width:'100%'}} type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)}/></label>
+    <label className="config-field">服务器 URL<input className="config-input" type="url" autoComplete="off" autoCapitalize="none" spellCheck={false} value={url} onChange={e=>setURL(e.target.value)} placeholder="https://notes.example.com"/></label>
+    <label className="config-field">配对 sync token<input className="config-input" type="password" autoComplete="off" autoCapitalize="none" spellCheck={false} value={token} onChange={e=>setToken(e.target.value)} placeholder="粘贴服务器生成的 sync token"/></label>
     <p>Token 仅保存在本机插件存储。保持插件地址稳定，否则浏览器本地队列可能无法恢复。</p>
     <label><input type="checkbox" checked={enabled} onChange={e=>setEnabled(e.target.checked)}/>启用自动同步</label>
-    <p><button onClick={()=>void save()}>保存配置</button>{' '}
+    <p className="config-actions"><button onClick={()=>void save()}>保存配置</button>
       <button onClick={()=>void request('full').catch(e=>setMessage(String(e)))}>重新全量同步</button>{' '}
       <button onClick={()=>void request('retry').catch(e=>setMessage(String(e)))}>检查并重试</button></p>
     <p>{message}</p><pre style={{whiteSpace:'pre-wrap'}}>{status}</pre>
