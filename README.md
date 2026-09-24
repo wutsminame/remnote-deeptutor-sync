@@ -9,6 +9,9 @@ The initial plugin implementation, tests, and documentation were primarily gener
 
 本插件初始版本的代码、测试及文档主要由 OpenAI Codex 按仓库所有者的需求生成。当前为 MVP，自动化检查和构建成功不替代人工审查及目标环境中的验证；尚待验证的范围见 [MVP limitations](#mvp-limitations)。
 
+## Data Privacy
+Please be noted that this plugin sends your rems to your appointed server that stores and processes your rems, which may cause significant personal data risk if this server is not under your control. Installing this plugin means your acceptance of the risks above. The best practice is to have this server on your own. 
+
 
 ## Features
 
