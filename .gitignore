@@ -1,0 +1,8 @@
+node_modules/
+dist/
+PluginZip.zip
+.env
+.env.*
+credentials.json
+*.log
+.DS_Store

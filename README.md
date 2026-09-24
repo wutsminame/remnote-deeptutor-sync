@@ -1,2 +1,84 @@
-# remnote-deeptutor-sync
-Read-only RemNote plugin for incremental sync to a self-hosted semantic retrieval service and DeepTutor.
+# RemNote DeepTutor Sync
+
+A read-only RemNote desktop plugin that mirrors note text and relationships to a user-configured HTTPS sync service. The service can provide semantic retrieval for DeepTutor.
+
+Source: https://github.com/wutsminame/remnote-deeptutor-sync
+
+## Features
+
+- Full synchronization using staged snapshot batches and an explicit commit.
+- Incremental synchronization using GlobalRemChanged as a change hint, per-Rem timestamps and content fingerprints.
+- Reconciliation of deletions, renames, parent/child structure, tags and references.
+- Persistent IndexedDB queue, ordered sequence numbers, acknowledgement checking, retry/backoff and single-writer locking.
+- Per-KB server URL and pairing token settings.
+
+The plugin reads RemNote data and does not modify notes. It includes no embedding model and downloads no model. Embeddings and search run on your separately deployed service.
+
+## Privacy and data transmission
+
+**When you enable synchronization, the plugin sends the current knowledge base's note text, answer text, RichText JSON, Rem IDs, parent/child IDs, tag/reference IDs, document flags and timestamps to the server URL you configure.** RichText may contain attachment URLs; PDF/image/audio/video binary files are not copied.
+
+The pairing token is saved with RemNote `storage.setLocal`, not synced settings. The local queue stores note data in browser IndexedDB. These stores are not an OS keychain or encrypted vault. Credentials, user notes and telemetry endpoints are not bundled in the source or ZIP.
+
+If your server uses a hosted embedding provider, that server sends retrieval snippets and search queries to the configured provider. A self-hosted model can keep embedding inference on your own machine. This plugin has no built-in hosted model provider.
+
+## Install and configure
+
+The manifest uses `unlisted: true` for personal use. Uploading `PluginZip.zip` through RemNote's **Settings → Plugins → Build → Upload plugin** follows RemNote's submission/review process; compilation alone does not mean approval.
+
+After loading the plugin, run **DeepTutor Sync: 配置与状态** from the command menu. The page displays the current KB ID. Configure an HTTPS service URL and the **sync** token issued for that KB, enable synchronization and save.
+
+The service must allow the actual plugin Origin through CORS and implement the protocol below. Keep one designated syncing client per KB. The plugin runs only while RemNote and its plugin host are active.
+
+## Build from source
+
+Requires Node.js 20.19+.
+
+```bash
+npm ci
+npm run build
+```
+
+This runs TypeScript and manifest validation, then writes `dist/` and `PluginZip.zip`. The GitHub URL format check does not prove that RemNote has approved the submission.
+
+For development, run `npm run dev`, then in RemNote choose **Settings → Plugins → Build → Develop from localhost** and enter `http://localhost:8080`.
+
+Plugin-only tests are available with `npm test`. No server or model is started by those tests.
+
+## Sync service contract
+
+`POST /v1/sync`, authenticated with `Authorization: Bearer <sync token>`, accepts JSON batches:
+
+```json
+{
+  "schema_version": 1,
+  "kb_id": "your-kb-id",
+  "client_id": "persistent-writer-uuid",
+  "seq": 4,
+  "batch_id": "persistent-batch-uuid",
+  "kind": "delta",
+  "records": [],
+  "deleted_ids": ["removed-rem-id"]
+}
+```
+
+Acknowledgements must include the same `ack_seq` and `batch_id`. Full sync sends `snapshot_start`, `snapshot_page` batches, then `snapshot_commit` with `snapshot_id` and `expected_count`. The server must not expose an incomplete snapshot, must reject out-of-order writes, and must acknowledge an identical retry without duplicating effects.
+
+Record fields: `id`, `text`, `back_text`, `rich_text`, `rich_back_text`, `parent_id`, `children`, `tags`, `references`, `is_document`, `rem_type`, `created_at`, `updated_at`, `local_updated_at`. See `src/types.ts` and `src/sync.ts` for the full client contract. This repository publishes the RemNote plugin; the separately delivered Linux service and DeepTutor patch are independent components.
+
+## MVP limitations
+
+- Full scans prepare data in memory and limit a queued scan to 128 MiB.
+- Polling enumerates the KB; it is not a server-side change stream.
+- Deletions require two missing inventories and a negative findOne result.
+- Timestamps and basic content are checked every minute; events and six-hour reconciliation trigger deep scans.
+- Changing the hosting origin or clearing browser storage can remove the queue and writer identity; a server-side writer reset and new full sync are then required.
+- SDK 0.0.46 is pinned. Actual RemNote host behavior and the user's Linux deployment still require end-to-end acceptance testing.
+
+## Official references
+
+- https://plugins.remnote.com/api/classes/RemNamespace
+- https://plugins.remnote.com/api/classes/Rem
+- https://plugins.remnote.com/advanced/manifest
+- https://plugins.remnote.com/advanced/submitting_plugins
+- https://plugins.remnote.com/advanced/unlisted_plugins
